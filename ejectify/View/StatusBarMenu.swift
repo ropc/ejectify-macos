@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import os.log
 
 class StatusBarMenu: NSMenu {
     
@@ -26,6 +27,9 @@ class StatusBarMenu: NSMenu {
     }
     
     private func listenForDiskNotifications() {
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(logNotification(_:)), name: NSWorkspace.willUnmountNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(logNotification(_:)), name: NSWorkspace.didUnmountNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(logNotification(_:)), name: NSWorkspace.didMountNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(disksChanged), name: NSWorkspace.didRenameVolumeNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(disksChanged), name: NSWorkspace.didMountNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(disksChanged), name: NSWorkspace.didUnmountNotification, object: nil)
@@ -38,12 +42,20 @@ class StatusBarMenu: NSMenu {
     
     private func updateMenu() {
         self.removeAllItems()
+        buildEjectAllMenu()
         buildVolumesMenu()
         buildOptionsMenu()
         buildAppMenu()
     }
     
+    private func buildEjectAllMenu() {
+        let ejectAllItem = NSMenuItem(title: "Eject All", action: #selector(ejectAll(menuItem:)), keyEquivalent: "")
+        ejectAllItem.target = volumes.count > 0 ? self : nil
+        addItem(ejectAllItem)
+    }
+    
     private func buildVolumesMenu() {
+        addItem(NSMenuItem.separator())
         
         // Title
         let title = volumes.count == 0 ? "No volumes".localized : "Volumes".localized
@@ -125,6 +137,15 @@ class StatusBarMenu: NSMenu {
         addItem(quitItem)
     }
     
+    @objc private func ejectAll(menuItem: NSMenuItem) {
+        let volumesToUnmount = volumes.filter { $0.enabled }
+        let transactionUrls = volumesToUnmount.map { $0.url }
+        volumesToUnmount.forEach { (volume) in
+            volume.unmount()
+        }
+        updateMenu()
+    }
+    
     @objc private func volumeClicked(menuItem: NSMenuItem) {
         guard let volume = menuItem.representedObject as? Volume else {
             return
@@ -157,5 +178,9 @@ class StatusBarMenu: NSMenu {
     
     @objc private func quitClicked() {
         NSApplication.shared.terminate(self)
+    }
+    
+    @objc private func logNotification(_ notification: Notification) {
+        os_log("notification: %@, userInfo: %@", notification.name.rawValue, notification.userInfo?.debugDescription ?? "null")
     }
 }

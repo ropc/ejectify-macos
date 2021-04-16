@@ -25,6 +25,7 @@ class Volume {
     let name: String
     let ejectable: Bool
     let removable: Bool
+    let url: URL
     
     private static var userDefaultsKeyPrefixVolume = "volume."
     var enabled: Bool {
@@ -37,12 +38,13 @@ class Volume {
         }
     }
     
-    init(disk: DADisk, id: String, name: String, ejectable: Bool, removable: Bool) {
+    init(disk: DADisk, id: String, name: String, ejectable: Bool, removable: Bool, url: URL) {
         self.disk = disk
         self.id = id
         self.name = name
         self.ejectable = ejectable
         self.removable = removable
+        self.url = url
     }
     
     func unmount() {
@@ -84,14 +86,14 @@ class Volume {
             return nil
         }
         
-        return Volume.fromDisk(disk: disk)
+        return Volume.fromDisk(disk: disk, url: url)
     }
     
-    static func fromDisk(disk: DADisk) -> Volume? {
+    static func fromDisk(disk: DADisk, url: URL) -> Volume? {
         guard let diskInfo = DADiskCopyDescription(disk) as? [NSString: Any] else {
             return nil
         }
-        
+
         guard let name = diskInfo[kDADiskDescriptionVolumeNameKey] as? String,
               let ejectable = diskInfo[kDADiskDescriptionMediaEjectableKey] as? Bool,
               let removable = diskInfo[kDADiskDescriptionMediaRemovableKey] as? Bool,
@@ -109,6 +111,6 @@ class Volume {
             return nil
         }
         
-        return Volume(disk: disk, id: id as String, name: name, ejectable: ejectable, removable: removable)
+        return Volume(disk: disk, id: id as String, name: name, ejectable: ejectable, removable: removable, url: url)
     }
 }
