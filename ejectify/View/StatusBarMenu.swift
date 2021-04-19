@@ -27,9 +27,6 @@ class StatusBarMenu: NSMenu {
     }
     
     private func listenForDiskNotifications() {
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(logNotification(_:)), name: NSWorkspace.willUnmountNotification, object: nil)
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(logNotification(_:)), name: NSWorkspace.didUnmountNotification, object: nil)
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(logNotification(_:)), name: NSWorkspace.didMountNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(disksChanged), name: NSWorkspace.didRenameVolumeNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(disksChanged), name: NSWorkspace.didMountNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(disksChanged), name: NSWorkspace.didUnmountNotification, object: nil)
@@ -138,11 +135,11 @@ class StatusBarMenu: NSMenu {
     }
     
     @objc private func ejectAll(menuItem: NSMenuItem) {
-        let volumesToUnmount = volumes.filter { $0.enabled }
-        let transactionUrls = volumesToUnmount.map { $0.url }
-        volumesToUnmount.forEach { (volume) in
-            volume.unmount()
-        }
+        volumes.filter { $0.enabled }
+            .forEach { (volume) in
+                NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.willUnmountNotification, object: nil, userInfo: [NSWorkspace.volumeURLUserInfoKey: volume.url])
+                volume.unmount()
+            }
         updateMenu()
     }
     
@@ -178,9 +175,5 @@ class StatusBarMenu: NSMenu {
     
     @objc private func quitClicked() {
         NSApplication.shared.terminate(self)
-    }
-    
-    @objc private func logNotification(_ notification: Notification) {
-        os_log("notification: %@, userInfo: %@", notification.name.rawValue, notification.userInfo?.debugDescription ?? "null")
     }
 }

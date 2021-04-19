@@ -17,6 +17,7 @@ class StatusBar {
         statusItem.menu = StatusBarMenu()
 
         updateButton()
+        setupNotificationObservers()
     }
     
     private func setupNotificationObservers() {
